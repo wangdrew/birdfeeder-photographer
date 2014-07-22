@@ -1,34 +1,65 @@
-import sys,os
-from subprocess import call
+import sys,os,subprocess
+from parse import parse as parser
+
 
 class PhotoCapture:
 	def __init__(self):
-		self.__trigger = PhotoTrigger()
-		self.__exporter = PhotoExporter()
+		self._trigger = PhotoTrigger()
+		self._exporter = PhotoExporter()
 
-		self.__photo_file_location = ''
+		self._photo_file_location = ''
+		self._camera_brand = 'Nikon'
+
+		if locateUsbDevice() is None:
+			print 'Camera not detected'
+
+	'''
+	Determines the USB device address using camera name
+	'''
+	def locateUsbCamera():
+		output = subprocess.Popen("lsusb | grep " + self._camera_brand, \
+		 shell=True, stdout=subprocess.PIPE).stdout.read()
+
+		if output == '':
+			return None
+		else:
+			output = output.split(":")[0]
+			strings = parser("Bus {} Device {}", output)
+			if strings is not None:
+				return '/dev/bus/usb/' + strings[0] + '/' + strings[1]
+			else: 
+				return None
 
 	def shouldFireShutter(data):
 		pass
 	
 	def fireShutter():
-		call(["gphoto2 --capture-image-and-download -F 3 -I 1"])
+		call(["gphoto2 --capture-image-and-download -F 1 -I 1"])
 
 	def resetUSBDevice():
-		pass
+		usb_address = locateUsbCamera()
+		
+		if usb_address is None:
+			return False
+		else:
+			out = subprocess.Popen("./bin/usbreset " + usb_address, shell=True, \
+				stdout=subprocess.PIPE).stdout.read()
+			if 'successful' not in out.lower():
+				print 'USB failed to reset, reason: ' + out
+				return False
+			else:
+				return True
 		
 	def run(self):
 
 		while True:
-			data = self.__trigger.getNewData()
+			data = self._trigger.getNewData()
 
 			# Use data to figure out whether to fire the shutter
 			if self.shouldFireShutter(data):
-				fireShutter()
-				self.__exporter.exportPhoto(self.__photo_file_location)
-
-	def test_run(self):
-		fireShutter()
+				self.fireShutter()
+				self.resetUSBDevice()	# Reset USB to get ready for the next shot
+				self._exporter.exportPhoto(self._photo_file_location)
 
 
 class PhotoTrigger():
