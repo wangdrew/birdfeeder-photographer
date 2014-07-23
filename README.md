@@ -6,6 +6,7 @@ Take pictures with a dSLR camera of birds at your feeder automatically!
 Dependencies
 ============
 gphoto2
+python-flickrapi
 
 Installation
 ============
@@ -18,3 +19,4 @@ sudo apt-get install gphoto2
 
 sudo pip install parse
 
+sudo easy_install flickrapi
