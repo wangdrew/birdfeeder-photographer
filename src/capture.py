@@ -1,27 +1,34 @@
-import sys,os,subprocess, time
 from parse import parse as parser
+from Queue import Queue
+from capture_rest_server import CaptureRestServer
+import thread
+import sys,os,subprocess, time
 
 def main():
 	birdcapture = PhotoCapture()
-	birdcapture.run_test()
+	birdcapture.run()
+
+def startRestServerThread(sharedqueue):
+		rest_server = CaptureRestServer(sharedqueue)
+		rest_server.run()
 
 class PhotoCapture:
 	def __init__(self):
-		self._trigger = PhotoTrigger()
+		self.kill_switch = False
+		self.sharedqueue = Queue()
 		self._exporter = PhotoExporter()
-
 		self._photo_file_location = ''
 		self._camera_brand = 'Nikon'
 
 		if self.locateUsbCamera() is None:
 			print 'Camera not detected'
 		else:
-			print 'We are good to go!'
+			print 'Camera is good to go!'
+	
 	'''
 	Determines the USB device address using camera name
 	'''
 	def locateUsbCamera(self):
-		print "here4"
 		output = subprocess.Popen("lsusb | grep " + self._camera_brand, \
 		 shell=True, stdout=subprocess.PIPE).stdout.read()
 
@@ -38,10 +45,17 @@ class PhotoCapture:
 				return None
 
 	def shouldFireShutter(data):
-		pass
+		if 'confidence' in data:
+			confidence = int(data['confidence'])
+			if confidence > 70:
+				return True
+			else:
+				return False
+		else:
+			return False
 	
 	def fireShutter(self):
-		subprocess.Popen(["gphoto2 --capture-image-and-download \
+		subprocess.call(["gphoto2 --capture-image-and-download \
 			--force-overwrite -F 1 -I 1"], shell=True)
 
 	def resetUSBDevice(self):
@@ -59,36 +73,51 @@ class PhotoCapture:
 				print 'USB failed to reset, reason: ' + out
 				return False
 			else:
+				print 'USB successfully reset'
 				return True
-		
+
+	def checkQueueMessages(self):
+		while True:
+			if self.sharedqueue.empty():
+				break
+			else:
+				value = self.sharedqueue.get(False)
+				if 'msg' in value:
+					if value['msg'] == 'halt':
+						if self.kill_switch == False:
+							self.kill_switch = True
+
+					elif value['msg'] == 'bird' and \
+						'msg_payload' in value:
+						if self.kill_switch == True:
+							self.kill_switch = False
+						return value['msg_payload'] 
+
+
 	def run(self):
 
+		thread.start_new_thread(startRestServerThread, (self.sharedqueue,))
+
 		while True:
-			data = self._trigger.getNewData()
+			data = self.checkQueueMessages()
 
 			# Use data to figure out whether to fire the shutter
-			if self.shouldFireShutter(data):
+			if (data is not None and \
+				self.kill_switch is not True and \
+				self.shouldFireShutter(data) ):
+				
 				self.fireShutter()
-				print 'Resetting USB Device'
 				self.resetUSBDevice()	# Reset USB to get ready for the next shot
-				self._exporter.exportPhoto(self._photo_file_location)
+				# self._exporter.exportPhoto(self._photo_file_location)
 
 	def run_test(self):
 
-		for x in range(0,3):
-			# TODO: Make this a blocking call
-			self.fireShutter()
-			time.sleep(9)
-			# TODO: Make this a blocking call.
-			self.resetUSBDevice()	# Reset USB to get ready for the next shot
-			time.sleep(3)
+		thread.start_new_thread(startRestServerThread, (self.sharedqueue,))
 
-class PhotoTrigger():
-	def __init__(self):
-		pass
-	
-	def getNewData(self):
-		pass
+		for x in range(0,1):
+			self.fireShutter()
+			self.resetUSBDevice()	# Reset USB to get ready for the next shot
+			self.checkQueueMessages()
 
 
 class PhotoExporter():
