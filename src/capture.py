@@ -14,22 +14,23 @@ def startRestServerThread(sharedqueue):
 
 class PhotoCapture:
 	def __init__(self):
-		self.kill_switch = False
+		self.CAMERA_BRAND = 'Nikon'
+		self.CONFIDENCE_THRSHOLD = 70
+
 		self.sharedqueue = Queue()
 		self._exporter = PhotoExporter()
 		self._photo_file_location = ''
-		self._camera_brand = 'Nikon'
 
 		if self.locateUsbCamera() is None:
 			print 'Camera not detected'
 		else:
-			print 'Camera is good to go!'
+			print 'Camera is ready'
 	
 	'''
 	Determines the USB device address using camera name
 	'''
 	def locateUsbCamera(self):
-		output = subprocess.Popen("lsusb | grep " + self._camera_brand, \
+		output = subprocess.Popen("lsusb | grep " + self.CAMERA_BRAND, \
 		 shell=True, stdout=subprocess.PIPE).stdout.read()
 
 		print('Locate USBcamera got: %s' % str(output))
@@ -44,15 +45,10 @@ class PhotoCapture:
 			else: 
 				return None
 
-	def shouldFireShutter(data):
-		if 'confidence' in data:
-			confidence = int(data['confidence'])
-			if confidence > 70:
-				return True
-			else:
-				return False
-		else:
-			return False
+	def shouldFireShutter(self, data):
+		confidence = int(data)
+		if confidence >= self.CONFIDENCE_THRSHOLD: return True
+		else: return False
 	
 	def fireShutter(self):
 		subprocess.call(["gphoto2 --capture-image-and-download \
@@ -82,16 +78,8 @@ class PhotoCapture:
 				break
 			else:
 				value = self.sharedqueue.get(False)
-				if 'msg' in value:
-					if value['msg'] == 'halt':
-						if self.kill_switch == False:
-							self.kill_switch = True
-
-					elif value['msg'] == 'bird' and \
-						'msg_payload' in value:
-						if self.kill_switch == True:
-							self.kill_switch = False
-						return value['msg_payload'] 
+				if 'bird' in value:
+					return value['bird'] # Contains confidence level
 
 
 	def run(self):
@@ -102,10 +90,7 @@ class PhotoCapture:
 			data = self.checkQueueMessages()
 
 			# Use data to figure out whether to fire the shutter
-			if (data is not None and \
-				self.kill_switch is not True and \
-				self.shouldFireShutter(data) ):
-				
+			if data is not None and self.shouldFireShutter(data):
 				self.fireShutter()
 				self.resetUSBDevice()	# Reset USB to get ready for the next shot
 				# self._exporter.exportPhoto(self._photo_file_location)
