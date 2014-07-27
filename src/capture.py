@@ -2,7 +2,9 @@ from parse import parse as parser
 from Queue import Queue
 from capture_rest_server import CaptureRestServer
 import thread
-import sys,os,subprocess, time
+import sys,os,subprocess,time
+import flickrapi
+from flickrapi import FlickrError
 
 def main():
 	birdcapture = PhotoCapture()
@@ -18,7 +20,7 @@ class PhotoCapture:
 		self.CONFIDENCE_THRSHOLD = 70
 
 		self.sharedqueue = Queue()
-		self._exporter = PhotoExporter()
+		self._flickr = FlickrUploader()
 		self._photo_file_location = ''
 
 		if self.locateUsbCamera() is None:
@@ -32,8 +34,6 @@ class PhotoCapture:
 	def locateUsbCamera(self):
 		output = subprocess.Popen("lsusb | grep " + self.CAMERA_BRAND, \
 		 shell=True, stdout=subprocess.PIPE).stdout.read()
-
-		print('Locate USBcamera got: %s' % str(output))
 
 		if output == '':
 			return None
@@ -91,9 +91,13 @@ class PhotoCapture:
 
 			# Use data to figure out whether to fire the shutter
 			if data is not None and self.shouldFireShutter(data):
-				self.fireShutter()
-				self.resetUSBDevice()	# Reset USB to get ready for the next shot
-				# self._exporter.exportPhoto(self._photo_file_location)
+				if self.resetUSBDevice() is True:
+					self.fireShutter()
+					self._flickr.uploadPhoto(self._photo_file_location)
+					print 'upload complete'
+				else:
+					print 'No camera found'
+
 
 	def run_test(self):
 
@@ -105,12 +109,29 @@ class PhotoCapture:
 			self.checkQueueMessages()
 
 
-class PhotoExporter():
+class FlickrUploader():
 	def __init__(self):
-		pass
+		self.api_key = os.getenv('FLICKR_APP_KEY')
+		self.api_secret = os.getenv('FLICKR_APP_SECRET')
+		self.api_token = os.getenv('FLICKR_APP_TOKEN')
+		if self.api_key is None or \
+			self.api_secret is None or \
+			self.token is None:
+			self.flickr = None
+		try:
+			self.flickr = flickrapi.FlickrAPI(api_key = self.api_key, \
+				secret = self.api_secret, token = self.api_token)
+		except FlickrError as e:
+			print('Could not register with Flickr services, reason: ' \
+				+ str(e))
+			self.flickr = None
 
-	def exportPhoto(self):
-		pass
+	def uploadPhoto(self, photo_location):
+		if self.flickr is not None:
+			pass
+			# flickr.upload()
+		else: 
+			pass
 
 if __name__ == "__main__":
 	main()
