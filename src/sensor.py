@@ -24,13 +24,13 @@ pir_state = False
 MAX_PHOTOS = 300
 
 ''' take no more than max photos in timeperiod'''
-MAX_PHOTOS_IN_TIME_PERIOD = 7
+MAX_PHOTOS_IN_TIME_PERIOD = 5
 TIME_PERIOD = 90.0 	# in seconds
 TIME_WAIT_BTWN_PHOTOS = 7.0
 TIME_WAIT_BTWN_TIME_PERIODS = 400.0
 
 ''' REST call params '''
-rest_server_ip = '0.0.0.0'	# this is the 2nd rasppi IP
+rest_server_ip = '192.168.1.109'	# this is the 2nd rasppi IP
 rest_server_port = '80'
 
 
@@ -50,7 +50,7 @@ def triggerShutter():
 
 	# Make REST call to 2nd RaspPi
 	try:
-		urllib2.urlopen("http://" + rest_server_port + \
+		urllib2.urlopen("http://" + rest_server_ip + \
 			":" + rest_server_port + "/bird?confidence=100")
 	except:
 		print "Error with REST call"
@@ -117,7 +117,7 @@ def run():
 				time_first_photo = timestamp_q.get()
 				print('q full')
 				if time_now - time_first_photo < TIME_PERIOD:
-					print('Max photos in period exceeded, sleeping 10 secs')
+					print('sleeping %s sec' % str(TIME_WAIT_BTWN_TIME_PERIODS))
 					time.sleep(TIME_WAIT_BTWN_TIME_PERIODS)
 			else:
 				time.sleep(TIME_WAIT_BTWN_PHOTOS)
