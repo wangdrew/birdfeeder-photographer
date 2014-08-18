@@ -12,6 +12,10 @@ python-flickrapi
 
 flask
 
+mimerender
+
+parse
+
 
 Installation
 ============
@@ -20,11 +24,23 @@ On your raspberry pi:
 
 git clone https://github.com/wangdrew/birdfeeder-photographer.git
 
+Ensure python-dev and pip package manager is installed:
+
+sudo apt-get install python-dev
+
+sudo apt-get install python-pip
+
+Then install project python dependencies:
+
 sudo apt-get install gphoto2
 
 sudo pip install parse
 
 sudo easy_install flickrapi
+
+sudo pip install Flask
+
+sudo pip install mimerender
 
 
 
