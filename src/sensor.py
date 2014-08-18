@@ -20,13 +20,14 @@ MAX_DISTANCE_THRESHOLD = 13.0
 MIN_DISTANCE_THRESHOLD = 2.0
 pir_state = False
 
-''' how often to take photos '''
-TIME_WAIT_BTWN_PHOTOS = 2 #10.0
-TIME_WAIT_BTWN_PHOTO_SETS = 5 # 300.0
-MAX_PHOTO_SET_SIZE = 5
-MAX_PHOTOS = 350
-# MAX_PHOTOS_IN_TIME_PERIOD = 5
-# TIME_PERIOD = 60	# in seconds
+''' maximum photos before shutoff '''
+MAX_PHOTOS = 300
+
+''' take no more than max photos in timeperiod'''
+MAX_PHOTOS_IN_TIME_PERIOD = 7
+TIME_PERIOD = 90.0 	# in seconds
+TIME_WAIT_BTWN_PHOTOS = 7.0
+TIME_WAIT_BTWN_TIME_PERIODS = 400.0
 
 ''' REST call params '''
 rest_server_ip = '0.0.0.0'	# this is the 2nd rasppi IP
@@ -48,8 +49,11 @@ def triggerShutter():
 	print 'I FIRED!'
 
 	# Make REST call to 2nd RaspPi
-	# urllib2.urlopen("http://" + rest_server_port + \
-	# 	":" + rest_server_port + "/bird?confidence=100")
+	try:
+		urllib2.urlopen("http://" + rest_server_port + \
+			":" + rest_server_port + "/bird?confidence=100")
+	except:
+		print "Error with REST call"
 
 
 '''
@@ -88,10 +92,10 @@ def pirDetected():
 
 def run():
 	
-	photo_just_taken = False
+	GPIO.output(GPIO_LED, True)
+
 	photos_taken = 0	
-	photos_in_curr_set = 0
-	# timestamp_q = Queue.queue()
+	timestamp_q = Queue.Queue(MAX_PHOTOS_IN_TIME_PERIOD)
 
 	while True:
 
@@ -99,35 +103,31 @@ def run():
 
 		if shouldFireTrigger:
 
-			photos_taken += 1
+			time_now = time.time()
+			
+			timestamp_q.put(time_now)
 
 			triggerShutter()
 
-			if photo_just_taken:
-				photos_in_curr_set += 1
-				print('# curr set: %s' % str(photos_in_curr_set))
-				
-				if photos_in_curr_set > MAX_PHOTO_SET_SIZE:
-					time.sleep(TIME_WAIT_BTWN_PHOTO_SETS)
-					photos_in_curr_set = 0
-
-				else:
-					time.sleep(TIME_WAIT_BTWN_PHOTOS)
+			photos_taken += 1
 			
+			print('time: %s', str(time_now))
+			
+			if timestamp_q.full():
+				time_first_photo = timestamp_q.get()
+				print('q full')
+				if time_now - time_first_photo < TIME_PERIOD:
+					print('Max photos in period exceeded, sleeping 10 secs')
+					time.sleep(TIME_WAIT_BTWN_TIME_PERIODS)
 			else:
-				photos_in_curr_set = 1
 				time.sleep(TIME_WAIT_BTWN_PHOTOS)
-				print('# curr set reset')
-
-			photo_just_taken = True	
-
-		else:
-			photo_just_taken = False
 
 		if photos_taken > MAX_PHOTOS:
 			break
 
 		time.sleep(.5)
+
+	GPIO.output(GPIO_LED, False)
 
 if __name__ == '__main__':
 	run()
