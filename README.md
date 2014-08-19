@@ -69,11 +69,11 @@ Copy the token.
 
 On the Raspberry PI which is hooked up to the dSLR, set the following environvment variables:
 
-FLICKR_API_KEY 
+export FLICKR_API_KEY='xyz' 
 
-FLICKR_API_SECRET
+export FLICKR_API_SECRET='xyz'
 
-FLICKR_API_TOKEN
+export FLICKR_API_TOKEN='xyz0'
 
 
 Running birdfeeder-photographer
@@ -81,8 +81,12 @@ Running birdfeeder-photographer
 
 On the Raspberry PI hooked up to the camera:
 
-sudo python src/capture.py
+Ensure Flickr environment variables are set.
 
-On the Raspberry PI interfacing with the sensors:
+sudo env FLICKR_APP_KEY=$FLICKR_APP_KEY FLICKR_APP_SECRET=$FLICKR_APP_SECRET FLICKR_APP_TOKEN=$FLICKR_APP_TOKEN python capture.py
+
+The extra keywords in front of the python command are necessary in order to allow superuser access to the environment variables that the Flikr integration requires
+
+On the Raspberry PI interfacing with the sensors it's much simpler:
 
 sudo python src/sensors.py

@@ -50,9 +50,15 @@ class PhotoCapture:
 		if confidence >= self.CONFIDENCE_THRSHOLD: return True
 		else: return False
 	
-	def fireShutter(self):
+	def fireShutter(self, filename):
+
 		subprocess.call(["gphoto2 --capture-image-and-download \
-			--force-overwrite -F 1 -I 1"], shell=True)
+			--force-overwrite --filename '" + filename + "' \
+			-F 1 -I 1 "], shell=True)
+
+		# subprocess.call(["gphoto2 --capture-image-and-download \
+		# 	--force-overwrite --filename 'bird-%y%m%d-%H%M%S.jpg' \
+		# 	-F 1 -I 1 "], shell=True)
 
 	def resetUSBDevice(self):
 
@@ -92,8 +98,10 @@ class PhotoCapture:
 			# Use data to figure out whether to fire the shutter
 			if data is not None and self.shouldFireShutter(data):
 				if self.resetUSBDevice() is True:
-					self.fireShutter()
-					self._flickr.uploadPhoto(self._photo_file_location)
+
+					filename = 'bird_' + str(int(time.time())) + '.jpg'
+					self.fireShutter(filename)
+					self._flickr.uploadPhoto(filename)
 					print 'upload complete'
 				else:
 					print 'No camera found'
@@ -114,9 +122,10 @@ class FlickrUploader():
 		self.api_key = os.getenv('FLICKR_APP_KEY')
 		self.api_secret = os.getenv('FLICKR_APP_SECRET')
 		self.api_token = os.getenv('FLICKR_APP_TOKEN')
+
 		if self.api_key is None or \
 			self.api_secret is None or \
-			self.token is None:
+			self.api_token is None:
 			self.flickr = None
 		try:
 			self.flickr = flickrapi.FlickrAPI(api_key = self.api_key, \
@@ -128,8 +137,7 @@ class FlickrUploader():
 
 	def uploadPhoto(self, photo_location):
 		if self.flickr is not None:
-			pass
-			# flickr.upload()
+			self.flickr.upload(filename = photo_location)
 		else: 
 			pass
 
