@@ -16,7 +16,7 @@ GPIO.setup(GPIO_PING_TRIGGER, GPIO.OUT)
 GPIO.setup(GPIO_PING_ECHO, GPIO.IN)
 
 ''' sensor constants'''
-MAX_DISTANCE_THRESHOLD = 13.0
+MAX_DISTANCE_THRESHOLD = 14.0
 MIN_DISTANCE_THRESHOLD = 2.0
 pir_state = False
 
@@ -26,11 +26,11 @@ MAX_PHOTOS = 300
 ''' take no more than max photos in timeperiod'''
 MAX_PHOTOS_IN_TIME_PERIOD = 5
 TIME_PERIOD = 90.0 	# in seconds
-TIME_WAIT_BTWN_PHOTOS = 7.0
+TIME_WAIT_BTWN_PHOTOS = 10.0
 TIME_WAIT_BTWN_TIME_PERIODS = 400.0
 
 ''' REST call params '''
-rest_server_ip = '192.168.1.109'	# this is the 2nd rasppi IP
+rest_server_ip = '192.168.1.117'	# this is the 2nd rasppi IP
 rest_server_port = '80'
 
 
