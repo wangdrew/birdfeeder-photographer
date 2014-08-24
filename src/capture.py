@@ -19,7 +19,7 @@ class PhotoCapture:
 		self.CAMERA_BRAND = 'Nikon'
 		self.CONFIDENCE_THRSHOLD = 70
 
-		self.sharedqueue = Queue()
+		self.sharedqueue = Queue(maxsize=1)
 		self._flickr = FlickrUploader()
 		self._photo_file_location = ''
 
@@ -55,10 +55,6 @@ class PhotoCapture:
 		subprocess.call(["gphoto2 --capture-image-and-download \
 			--force-overwrite --filename '" + filename + "' \
 			-F 1 -I 1 "], shell=True)
-
-		# subprocess.call(["gphoto2 --capture-image-and-download \
-		# 	--force-overwrite --filename 'bird-%y%m%d-%H%M%S.jpg' \
-		# 	-F 1 -I 1 "], shell=True)
 
 	def resetUSBDevice(self):
 

@@ -44,7 +44,11 @@ class CaptureRestServer():
             '''
             Takes URLS in form /bird?confidence=N
             '''
-            self.sharedqueue.put({'bird':int(request.args['confidence'])})
+            if self.sharedqueue.full():
+                print('Queue is full' + str(e))
+            else:
+                self.sharedqueue.put({'bird':int(request.args['confidence'])})
+
             return {'message': 'Triggering bird camera with confidence: ' + \
                 str(request.args['confidence']) + '%'}
 
